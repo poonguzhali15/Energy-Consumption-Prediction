@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Energy Prediction</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.18.2.min.js"></script>
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            padding: 20px;
+            background: linear-gradient(90deg, #ff758c, #ff6e63);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        /* Main Layout */
+        .container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Input & Graph Containers */
+        .form-container, .graph-container {
+            background: #1e1e2f;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            animation: fadeInUp 1.2s;
+        }
+
+        /* Form Styling */
+        .form-container {
+            width: 30%;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: #ff758c;
+        }
+
+        label {
+            display: block;
+            text-align: left;
+            margin-top: 10px;
+            font-size: 1rem;
+            color: #bdbdbd;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border-radius: 8px;
+            border: none;
+            outline: none;
+            font-size: 1rem;
+            background: #2c2c3e;
+            color: #fff;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-left: 4px solid #ff6e63;
+            background: #3a3a4d;
+        }
+
+        /* Predict Button */
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #ff758c, #ff6e63);
+            color: #fff;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(255, 94, 94, 0.5);
+        }
+
+        /* Graph Section */
+        .graph-container {
+            width: 60%;
+        }
+
+        #plotlyGraph {
+            width: 100%;
+            height: 400px;
+        }
+
+        /* AI Suggestions */
+        .ai-suggestions {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2c2c3e;
+            border-left: 5px solid #ff6e63;
+            font-size: 1rem;
+            color: #cfcfcf;
+            display: none;
+            animation: fadeInUp 1.5s;
+        }
+
+        .ai-suggestions ul {
+            padding-left: 20px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>AI-Driven Energy Management System</header>
+
+    <div class="container">
+        <!-- Input Section -->
+        <div class="form-container">
+            <h2>Enter Details</h2>
+            <form id="predictionForm">
+                <label for="year">Year:</label>
+                <input type="number" id="year" name="year" placeholder="Enter Year" required>
+                
+                <label for="month">Month:</label>
+                <input type="number" id="month" name="month" placeholder="Enter Month (1-12)" required>
+                
+                <button type="submit">Predict</button>
+            </form>
+        </div>
+
+        <!-- Graph Section -->
+        <div class="graph-container">
+            <h2>Prediction Results</h2>
+            <div id="output" style="display: none;">
+                <div id="plotlyGraph"></div>
+                <div id="aiSuggestions" class="ai-suggestions"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $('#predictionForm').on('submit', function (event) {
+                event.preventDefault();
+
+                $.ajax({
+                    url: '/predict',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function (response) {
+                        $('#output').fadeIn();
+
+                        // Plotly Graph Data
+                        const labels = ['Active Power', 'Current', 'Voltage'];
+                        const predictedData = response.predictions.slice(0, 3);
+                        const plotlyData = [{
+                            x: labels,
+                            y: predictedData,
+                            name: 'Predicted Values',
+                            type: 'bar',
+                            marker: { color: 'rgba(255, 99, 132, 0.7)' }
+                        }];
+
+                        // Graph Layout
+                        const layout = {
+                            title: 'Predicted Energy Metrics',
+                            xaxis: { title: 'Metrics' },
+                            yaxis: { title: 'Values' },
+                            paper_bgcolor: '#1e1e2f',
+                            font: { color: '#fff' }
+                        };
+
+                        Plotly.newPlot('plotlyGraph', plotlyData, layout);
+
+                        // Display AI suggestions in bullet points
+                        let suggestionsList = response.ai_suggestions.split("\n").map(s => `<li>${s}</li>`).join("");
+                        $('#aiSuggestions').html(`<strong>AI Energy Optimization Suggestions:</strong><ul>${suggestionsList}</ul>`);
+                        $('#aiSuggestions').fadeIn();
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
